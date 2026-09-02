@@ -18,6 +18,7 @@
     "types": [
       "vite/client"
     ],
+    "resolveJsonModule": true,
     "paths": {
       "@/*": [
         "./*"
