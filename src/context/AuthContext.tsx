@@ -3,6 +3,7 @@ import {
   auth,
   googleProvider,
   signInWithPopup,
+  signInAnonymously,
   fbSignOut,
   onAuthStateChanged,
   db,
@@ -24,6 +25,7 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInAsGuest: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfileData: (data: Partial<UserProfile>) => Promise<boolean>;
   checkUsernameAvailable: (username: string) => Promise<boolean>;
@@ -254,7 +256,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await syncUserProfile(result.user);
       }
     } catch (err: any) {
-      console.error('Google Sign In Error:', err);
+      const errorCode = err?.code || '';
+      if (
+        errorCode === 'auth/popup-closed-by-user' ||
+        errorCode === 'auth/cancelled-popup-request'
+      ) {
+        // User closed or cancelled the popup without finishing sign in - return quietly
+        return;
+      }
+      if (errorCode === 'auth/popup-blocked') {
+        throw new Error('Sign-in popup was blocked by your browser. Please allow popups or open in a new tab.');
+      }
+      console.warn('Google Sign In warning:', err);
+      throw err;
+    }
+  };
+
+  const signInAsGuest = async () => {
+    try {
+      const result = await signInAnonymously(auth);
+      if (result.user) {
+        const guestSeed = Math.floor(1000 + Math.random() * 9000);
+        await syncUserProfile({
+          uid: result.user.uid,
+          displayName: `Guest User ${guestSeed}`,
+          email: '',
+          photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${result.user.uid}`,
+        });
+      }
+    } catch (err: any) {
+      console.warn('Guest sign-in error:', err);
       throw err;
     }
   };
@@ -466,6 +497,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         firebaseUser,
         loading,
         signInWithGoogle,
+        signInAsGuest,
         signOut,
         updateProfileData,
         checkUsernameAvailable,
