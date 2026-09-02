@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { PWAInstallButton } from '../common/PWAInstallButton';
 import { calculateAge, validateDOB } from '../../lib/constants';
+import { getDeviceInfo } from '../../lib/pushClient';
 import {
   User,
   AtSign,
@@ -12,6 +13,8 @@ import {
   Volume2,
   VolumeX,
   Bell,
+  BellRing,
+  BellOff,
   LogOut,
   Edit2,
   Check,
@@ -25,6 +28,10 @@ import {
   Lock,
   MessageSquare,
   Activity,
+  Smartphone,
+  Send,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -34,6 +41,7 @@ export const ProfileView: React.FC = () => {
     signOut,
     updateProfileData,
     updatePrivacySettings,
+    updateNotificationSettings,
     checkUsernameAvailable,
     theme,
     toggleTheme,
@@ -43,7 +51,15 @@ export const ProfileView: React.FC = () => {
     setNotificationsEnabled,
   } = useAuth();
 
-  const { requestNotificationPermission, addToast } = useNotifications();
+  const {
+    requestNotificationPermission,
+    pushPermissionStatus,
+    fcmToken,
+    enablePushNotifications,
+    disablePushNotifications,
+    sendTestPush,
+    addToast,
+  } = useNotifications();
 
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -54,6 +70,9 @@ export const ProfileView: React.FC = () => {
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [dobError, setDobError] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isTestingPush, setIsTestingPush] = useState(false);
+
+  const deviceInfo = getDeviceInfo();
 
   const privacy = user?.privacySettings || {
     onlineStatus: 'everyone',
@@ -159,25 +178,59 @@ export const ProfileView: React.FC = () => {
   };
 
   const handleToggleNotifications = async () => {
-    if (!notificationsEnabled) {
-      const granted = await requestNotificationPermission();
+    if (!notificationsEnabled || pushPermissionStatus !== 'granted') {
+      const granted = await enablePushNotifications();
       if (granted) {
         setNotificationsEnabled(true);
         addToast({
-          title: 'Notifications Enabled',
-          message: 'You will receive alerts for new calls and messages.',
+          title: 'Push Notifications Enabled',
+          message: 'This device is now registered for background calls & messages.',
           type: 'success',
         });
       } else {
         setNotificationsEnabled(false);
         addToast({
-          title: 'Permission Required',
-          message: 'Please allow notifications in your browser settings.',
+          title: 'Permission Denied',
+          message: 'Please allow notification permissions in your browser address bar settings.',
           type: 'warning',
         });
       }
     } else {
-      setNotificationsEnabled(false);
+      await disablePushNotifications();
+      addToast({
+        title: 'Notifications Disabled',
+        message: 'Push alerts have been turned off for this device.',
+        type: 'info',
+      });
+    }
+  };
+
+  const handleTestPushNotification = async () => {
+    if (isTestingPush) return;
+    setIsTestingPush(true);
+    try {
+      const ok = await sendTestPush();
+      if (ok) {
+        addToast({
+          title: 'Test Notification Dispatched',
+          message: 'If your tab is in background, you should see a push notification.',
+          type: 'success',
+        });
+      } else {
+        addToast({
+          title: 'Test Failed',
+          message: 'Could not send test push. Ensure notifications are allowed.',
+          type: 'error',
+        });
+      }
+    } catch (e) {
+      addToast({
+        title: 'Error',
+        message: 'Failed to trigger test push.',
+        type: 'error',
+      });
+    } finally {
+      setIsTestingPush(false);
     }
   };
 
@@ -477,39 +530,227 @@ export const ProfileView: React.FC = () => {
         </div>
 
         {/* 2. Notifications & Audio Preferences */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 shadow-sm space-y-1">
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 py-1 flex items-center gap-1.5">
-            <Bell className="w-3.5 h-3.5 text-indigo-500" />
-            <span>Notifications & Audio</span>
-          </h4>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 shadow-sm space-y-3">
+          <div className="flex items-center justify-between px-2 pt-1">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Bell className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Push Notifications & Audio</span>
+            </h4>
 
-          {/* Notifications Setting */}
-          <div className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+            {/* Permission Badge */}
+            <span
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                pushPermissionStatus === 'granted' && notificationsEnabled
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  : pushPermissionStatus === 'denied'
+                  ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+              }`}
+            >
+              {pushPermissionStatus === 'granted' && notificationsEnabled ? (
+                <>
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>Active & Registered</span>
+                </>
+              ) : pushPermissionStatus === 'denied' ? (
+                <>
+                  <AlertCircle className="w-3 h-3" />
+                  <span>Blocked</span>
+                </>
+              ) : (
+                <>
+                  <BellOff className="w-3 h-3" />
+                  <span>Permission Needed</span>
+                </>
+              )}
+            </span>
+          </div>
+
+          {/* Master Push Alert Toggle */}
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-800/60">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                <Bell className="w-4 h-4" />
+                <BellRing className="w-4 h-4" />
               </div>
               <div>
                 <h5 className="text-xs font-bold text-slate-900 dark:text-white">
-                  Push & In-App Alerts
+                  Push Notifications (FCM)
                 </h5>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Incoming calls & message alerts
+                  Background calls, alerts & messages
                 </p>
               </div>
             </div>
             <button
               onClick={handleToggleNotifications}
               className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
-                notificationsEnabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
+                notificationsEnabled && pushPermissionStatus === 'granted'
+                  ? 'bg-indigo-600'
+                  : 'bg-slate-300 dark:bg-slate-700'
               }`}
             >
               <div
                 className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                  notificationsEnabled ? 'translate-x-5' : 'translate-x-0'
+                  notificationsEnabled && pushPermissionStatus === 'granted'
+                    ? 'translate-x-5'
+                    : 'translate-x-0'
                 }`}
               />
             </button>
+          </div>
+
+          {/* Granular Notification Switches */}
+          {notificationsEnabled && pushPermissionStatus === 'granted' && (
+            <div className="space-y-1 pt-1 border-t border-slate-100 dark:border-slate-800/80">
+              {/* Message Notifications */}
+              <div className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Message Notifications
+                </span>
+                <button
+                  onClick={() =>
+                    updateNotificationSettings({
+                      messages: !(user?.notificationSettings?.messages ?? true),
+                    })
+                  }
+                  className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${
+                    user?.notificationSettings?.messages ?? true
+                      ? 'bg-indigo-600'
+                      : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                      user?.notificationSettings?.messages ?? true
+                        ? 'translate-x-4'
+                        : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Incoming Call Notifications */}
+              <div className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Incoming Calls
+                </span>
+                <button
+                  onClick={() =>
+                    updateNotificationSettings({
+                      incomingCalls: !(user?.notificationSettings?.incomingCalls ?? true),
+                    })
+                  }
+                  className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${
+                    user?.notificationSettings?.incomingCalls ?? true
+                      ? 'bg-indigo-600'
+                      : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                      user?.notificationSettings?.incomingCalls ?? true
+                        ? 'translate-x-4'
+                        : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Missed Calls */}
+              <div className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Missed Call Alerts
+                </span>
+                <button
+                  onClick={() =>
+                    updateNotificationSettings({
+                      missedCalls: !(user?.notificationSettings?.missedCalls ?? true),
+                    })
+                  }
+                  className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${
+                    user?.notificationSettings?.missedCalls ?? true
+                      ? 'bg-indigo-600'
+                      : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                      user?.notificationSettings?.missedCalls ?? true
+                        ? 'translate-x-4'
+                        : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Message Preview in Notifications */}
+              <div className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                <div>
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300 block">
+                    Show Message Preview
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    Display message content in push banner
+                  </span>
+                </div>
+                <button
+                  onClick={() =>
+                    updatePrivacySettings({
+                      showPreview: !(privacy.showPreview ?? true),
+                    })
+                  }
+                  className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${
+                    privacy.showPreview ?? true ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                      privacy.showPreview ?? true ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Blocked Permission Warning Box */}
+          {pushPermissionStatus === 'denied' && (
+            <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-900/40 text-rose-800 dark:text-rose-200 text-xs space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-[11px] text-rose-700 dark:text-rose-300">
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span>Browser Permission is Blocked</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-rose-600/90 dark:text-rose-300/80">
+                Click the site settings/lock icon in your browser address bar and set <strong>Notifications</strong> to <strong>Allow</strong>.
+              </p>
+            </div>
+          )}
+
+          {/* Registered Device & Token Card */}
+          <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/30 border border-slate-200/60 dark:border-slate-800 text-xs space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Smartphone className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Device: {deviceInfo.browser} on {deviceInfo.os}</span>
+              </span>
+
+              {fcmToken && (
+                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-lg">
+                  Token Synced
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={handleTestPushNotification}
+                disabled={isTestingPush || !notificationsEnabled}
+                className="w-full py-2 px-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 font-bold text-xs border border-indigo-200/60 dark:border-indigo-800/60 flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+              >
+                <Send className="w-3 h-3" />
+                <span>{isTestingPush ? 'Sending Test Push...' : 'Send Test Push Notification'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Sound Effects Setting */}

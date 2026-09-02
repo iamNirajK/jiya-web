@@ -17,7 +17,7 @@ import {
   getDocs,
   FirebaseUser,
 } from '../lib/firebase';
-import { UserProfile, PrivacySettings } from '../types';
+import { UserProfile, PrivacySettings, UserNotificationSettings } from '../types';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -32,6 +32,7 @@ interface AuthContextType {
   muteChat: (conversationId: string, durationMs: number) => Promise<void>;
   unmuteChat: (conversationId: string) => Promise<void>;
   updatePrivacySettings: (settings: Partial<PrivacySettings>) => Promise<boolean>;
+  updateNotificationSettings: (settings: Partial<UserNotificationSettings>) => Promise<boolean>;
   isChatMuted: (conversationId: string) => boolean;
   isFavorite: (targetUid: string) => boolean;
   isChatPinned: (conversationId: string) => boolean;
@@ -50,6 +51,15 @@ export const DEFAULT_PRIVACY: PrivacySettings = {
   lastSeen: 'everyone',
   readReceipts: true,
   typingIndicator: true,
+  showPreview: true,
+};
+
+export const DEFAULT_NOTIFICATION_SETTINGS: UserNotificationSettings = {
+  messages: true,
+  incomingCalls: true,
+  missedCalls: true,
+  sound: true,
+  vibration: true,
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -415,6 +425,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Notification Settings Update
+  const updateNotificationSettings = async (settings: Partial<UserNotificationSettings>): Promise<boolean> => {
+    if (!user?.uid) return false;
+    const newSettings: UserNotificationSettings = {
+      ...(user.notificationSettings || DEFAULT_NOTIFICATION_SETTINGS),
+      ...settings,
+    };
+
+    setUser((prev) => (prev ? { ...prev, notificationSettings: newSettings } : null));
+
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        notificationSettings: newSettings,
+      });
+      return true;
+    } catch (e) {
+      console.warn('Update notification settings error:', e);
+      return false;
+    }
+  };
+
   const isChatMuted = (conversationId: string): boolean => {
     if (!user?.mutedChats || !user.mutedChats[conversationId]) return false;
     return user.mutedChats[conversationId] > Date.now();
@@ -443,6 +474,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         muteChat,
         unmuteChat,
         updatePrivacySettings,
+        updateNotificationSettings,
         isChatMuted,
         isFavorite,
         isChatPinned,

@@ -17,6 +17,11 @@ import {
 import { CallType, CallStatus, CallSession, UserProfile } from '../types';
 import { getRtcConfiguration, getUserMediaStream, stopMediaStream } from '../lib/webrtc';
 import { audioService } from '../lib/audioService';
+import {
+  triggerPushCallNotification,
+  triggerPushCallCancelled,
+  triggerPushMissedCall,
+} from '../lib/pushClient';
 
 interface CallContextType {
   activeCall: CallSession | null;
@@ -240,6 +245,18 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [activeCall?.status, activeCall?.connectedAt]);
 
+  // Listen for Service Worker incoming call actions (e.g. Reject from lock screen notification)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === 'REJECT_INCOMING_CALL') {
+        rejectCall();
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, []);
+
   // START OUTGOING CALL
   const startCall = async (receiver: UserProfile, type: CallType) => {
     if (!user?.uid) return;
@@ -338,6 +355,16 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         createdAt: Date.now(),
       });
 
+      // Trigger High-Priority FCM Push Notification for Background/Locked Screen
+      triggerPushCallNotification({
+        callId,
+        callerId: user.uid,
+        callerName: user.displayName || 'User',
+        callerPhoto: user.photoURL || undefined,
+        receiverId: receiver.uid,
+        callType: type,
+      });
+
       // Listen for Answer and Call Status
       callUnsubRef.current = onSnapshot(callDocRef, async (snapshot) => {
         const data = snapshot.data() as CallSession | undefined;
@@ -397,6 +424,18 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           await updateDoc(callDocRef, { status: 'missed', endedAt: Date.now() });
           logCallSummary(callSession, 'missed', 0);
+
+          // Push missed call notification
+          triggerPushMissedCall({
+            callId,
+            callerId: user.uid,
+            callerName: user.displayName || 'User',
+            callerPhoto: user.photoURL || undefined,
+            receiverId: receiver.uid,
+            callType: type,
+            conversationId: [user.uid, receiver.uid].sort().join('_'),
+          });
+
           endCall();
         }
       }, 45000);
@@ -560,6 +599,14 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setActiveCall(null);
 
     if (session) {
+      // If caller ended before receiver answered, dismiss receiver's ringing notification
+      if (session.status === 'calling' && session.receiverId) {
+        triggerPushCallCancelled({
+          callId: session.callId,
+          receiverId: session.receiverId,
+        });
+      }
+
       try {
         const callDocRef = doc(db, 'calls', session.callId);
         await updateDoc(callDocRef, {

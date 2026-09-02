@@ -16,6 +16,7 @@ import {
   getDoc,
 } from '../../lib/firebase';
 import { UserProfile, ChatMessage, Conversation, CallType } from '../../types';
+import { triggerPushMessageNotification } from '../../lib/pushClient';
 import { MessageBubble } from './MessageBubble';
 import { AudioRecorder } from './AudioRecorder';
 import { ImageViewerModal } from './ImageViewerModal';
@@ -360,6 +361,17 @@ export const ChatView: React.FC<ChatViewProps> = ({ otherUser, onBack }) => {
         read: false,
         createdAt: now,
       });
+
+      // Send background FCM push notification
+      triggerPushMessageNotification({
+        senderId: user.uid,
+        senderName: user.displayName || 'User',
+        senderPhoto: user.photoURL || undefined,
+        receiverId: otherUser.uid,
+        conversationId,
+        messageText: text,
+        messageType: 'text',
+      });
     } catch (err) {
       console.error('Send message error:', err);
     }
@@ -417,6 +429,16 @@ export const ChatView: React.FC<ChatViewProps> = ({ otherUser, onBack }) => {
         data: { conversationId },
         read: false,
         createdAt: now,
+      });
+
+      triggerPushMessageNotification({
+        senderId: user.uid,
+        senderName: user.displayName || 'User',
+        senderPhoto: user.photoURL || undefined,
+        receiverId: otherUser.uid,
+        conversationId,
+        messageText: `🎙️ Sent a voice note (${durationSec}s)`,
+        messageType: 'voice_message',
       });
     } catch (err) {
       console.error('Send voice error:', err);
@@ -489,6 +511,16 @@ export const ChatView: React.FC<ChatViewProps> = ({ otherUser, onBack }) => {
         data: { conversationId },
         read: false,
         createdAt: now,
+      });
+
+      triggerPushMessageNotification({
+        senderId: user.uid,
+        senderName: user.displayName || 'User',
+        senderPhoto: user.photoURL || undefined,
+        receiverId: otherUser.uid,
+        conversationId,
+        messageText: imageCaption.trim() ? `📷 ${imageCaption.trim()}` : '📷 Sent a photo',
+        messageType: 'image',
       });
 
       setSelectedImageFile(null);

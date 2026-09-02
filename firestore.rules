@@ -97,5 +97,18 @@ service cloud.firestore {
         resource.data.senderId == request.auth.uid
       );
     }
+
+    // Push Device Tokens Collection (FCM Registration)
+    match /push_tokens/{tokenId} {
+      allow read: if isSignedIn() && (
+        resource == null || resource.data.userId == request.auth.uid
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        request.resource.data.userId == request.auth.uid
+      );
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
   }
 }

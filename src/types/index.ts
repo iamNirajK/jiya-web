@@ -3,6 +3,46 @@ export interface PrivacySettings {
   lastSeen: 'everyone' | 'nobody';
   readReceipts?: boolean;
   typingIndicator?: boolean;
+  showPreview?: boolean;
+}
+
+export interface UserNotificationSettings {
+  messages: boolean;
+  incomingCalls: boolean;
+  missedCalls: boolean;
+  sound: boolean;
+  vibration: boolean;
+}
+
+export interface PushTokenRecord {
+  id: string; // token hash or document id
+  userId: string;
+  token: string;
+  deviceType: 'mobile' | 'tablet' | 'desktop' | 'unknown';
+  browser: string;
+  os: string;
+  userAgent?: string;
+  createdAt: number;
+  updatedAt: number;
+  lastSeenAt: number;
+  isActive: boolean;
+}
+
+export interface PushNotificationPayload {
+  type: 'message' | 'incoming_call' | 'missed_call' | 'call_cancelled';
+  conversationId?: string;
+  senderId?: string;
+  senderName?: string;
+  senderPhoto?: string;
+  messageId?: string;
+  messageText?: string;
+  callId?: string;
+  callerId?: string;
+  callerName?: string;
+  callerPhoto?: string;
+  callType?: 'voice' | 'video';
+  timestamp?: string | number;
+  clickAction?: string;
 }
 
 export interface UserProfile {
@@ -22,6 +62,7 @@ export interface UserProfile {
   pinnedChats?: string[]; // array of conversation IDs
   mutedChats?: Record<string, number>; // conversationId -> mutedUntil epoch ms
   privacySettings?: PrivacySettings;
+  notificationSettings?: UserNotificationSettings;
 }
 
 export type MessageType = 'text' | 'voice_call' | 'video_call' | 'voice_message' | 'image';

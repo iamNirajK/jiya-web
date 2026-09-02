@@ -259,6 +259,54 @@
         }
       },
       "required": ["userId", "senderId", "type", "title", "body", "read", "createdAt"]
+    },
+    "PushTokenRecord": {
+      "title": "PushTokenRecord",
+      "description": "Registered FCM push device token for user.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Document ID."
+        },
+        "userId": {
+          "type": "string",
+          "description": "User UID owning this device."
+        },
+        "token": {
+          "type": "string",
+          "description": "FCM device registration token."
+        },
+        "deviceType": {
+          "type": "string",
+          "description": "Device category: mobile, tablet, desktop."
+        },
+        "browser": {
+          "type": "string",
+          "description": "Client browser name."
+        },
+        "os": {
+          "type": "string",
+          "description": "Operating system name."
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Creation timestamp in epoch ms."
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Last updated timestamp."
+        },
+        "lastSeenAt": {
+          "type": "number",
+          "description": "Last active timestamp."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Active state of device token."
+        }
+      },
+      "required": ["userId", "token", "createdAt", "isActive"]
     }
   },
   "firestore": {
@@ -289,6 +337,10 @@
     "/notifications/{notificationId}": {
       "schema": "AppNotification",
       "description": "User notifications."
+    },
+    "/push_tokens/{tokenId}": {
+      "schema": "PushTokenRecord",
+      "description": "Device FCM push registration tokens."
     }
   }
 }
