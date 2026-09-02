@@ -1,0 +1,294 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public and private profile data for a registered Jiya user.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique Firebase Authentication UID."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name."
+        },
+        "username": {
+          "type": "string",
+          "description": "Unique username handle."
+        },
+        "email": {
+          "type": "string",
+          "description": "Google email address."
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Avatar photo URL."
+        },
+        "isOnline": {
+          "type": "boolean",
+          "description": "Current real-time presence."
+        },
+        "lastSeen": {
+          "type": "number",
+          "description": "Last active timestamp in epoch ms."
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Account creation timestamp."
+        },
+        "bio": {
+          "type": "string",
+          "description": "User bio or status message."
+        },
+        "favorites": {
+          "type": "array",
+          "description": "List of favorite contact UIDs."
+        },
+        "pinnedChats": {
+          "type": "array",
+          "description": "List of pinned conversation IDs."
+        },
+        "mutedChats": {
+          "type": "object",
+          "description": "Map of conversationId to mutedUntil epoch ms."
+        },
+        "privacySettings": {
+          "type": "object",
+          "description": "Privacy preferences for online and last seen status."
+        },
+        "state": {
+          "type": "string",
+          "description": "Indian State or Union Territory of the user."
+        },
+        "dateOfBirth": {
+          "type": "string",
+          "description": "User Date of Birth in YYYY-MM-DD format."
+        },
+        "city": {
+          "type": "string",
+          "description": "Optional approximate city or region."
+        },
+        "approxLocation": {
+          "type": "string",
+          "description": "Approximate general location string (city, state) with zero precise coordinates."
+        },
+        "locationPermissionStatus": {
+          "type": "string",
+          "description": "Location sharing permission status (granted, denied, prompt)."
+        }
+      },
+      "required": ["uid", "displayName", "username", "isOnline", "lastSeen", "createdAt"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "One-to-one conversation between two Jiya users.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique conversation ID formatted as uidA_uidB."
+        },
+        "participants": {
+          "type": "array",
+          "description": "Array of user UIDs participating in the chat."
+        },
+        "participantData": {
+          "type": "object",
+          "description": "Cached display names, photos, and usernames of participants."
+        },
+        "lastMessage": {
+          "type": "object",
+          "description": "Snippet and metadata of the latest message."
+        },
+        "unreadCount": {
+          "type": "object",
+          "description": "Unread message count mapped by user UID."
+        },
+        "typing": {
+          "type": "object",
+          "description": "Typing or recording status mapped by user UID."
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Last updated timestamp."
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Conversation creation timestamp."
+        }
+      },
+      "required": ["id", "participants", "updatedAt", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A single direct message, voice note, image, or call event.",
+      "type": "object",
+      "properties": {
+        "conversationId": {
+          "type": "string",
+          "description": "Parent conversation ID."
+        },
+        "senderId": {
+          "type": "string",
+          "description": "UID of the message sender."
+        },
+        "senderName": {
+          "type": "string",
+          "description": "Sender display name."
+        },
+        "senderPhoto": {
+          "type": "string",
+          "description": "Sender photo URL."
+        },
+        "receiverId": {
+          "type": "string",
+          "description": "UID of the message receiver."
+        },
+        "text": {
+          "type": "string",
+          "description": "Message text or caption."
+        },
+        "type": {
+          "type": "string",
+          "description": "Message type: text, voice_call, video_call, voice_message, image."
+        },
+        "audioUrl": {
+          "type": "string",
+          "description": "Audio data URL for voice messages."
+        },
+        "audioDuration": {
+          "type": "number",
+          "description": "Voice message length in seconds."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Image data URL for shared photos."
+        },
+        "timestamp": {
+          "type": "number",
+          "description": "Creation timestamp in epoch ms."
+        },
+        "delivered": {
+          "type": "boolean",
+          "description": "Delivery status."
+        },
+        "read": {
+          "type": "boolean",
+          "description": "Read receipt status."
+        }
+      },
+      "required": ["conversationId", "senderId", "receiverId", "type", "timestamp"]
+    },
+    "CallSession": {
+      "title": "CallSession",
+      "description": "WebRTC voice or video call signaling session.",
+      "type": "object",
+      "properties": {
+        "callId": {
+          "type": "string",
+          "description": "Unique call document ID."
+        },
+        "callerId": {
+          "type": "string",
+          "description": "UID of the caller."
+        },
+        "callerName": {
+          "type": "string",
+          "description": "Caller display name."
+        },
+        "receiverId": {
+          "type": "string",
+          "description": "UID of the receiver."
+        },
+        "receiverName": {
+          "type": "string",
+          "description": "Receiver display name."
+        },
+        "type": {
+          "type": "string",
+          "description": "Call type: voice or video."
+        },
+        "status": {
+          "type": "string",
+          "description": "Call status: calling, connected, rejected, ended, missed, busy."
+        },
+        "startedAt": {
+          "type": "number",
+          "description": "Call start timestamp."
+        }
+      },
+      "required": ["callId", "callerId", "receiverId", "type", "status", "startedAt"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "In-app notifications for calls, messages, and presence.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Target user UID."
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Originating sender UID."
+        },
+        "senderName": {
+          "type": "string",
+          "description": "Originating sender name."
+        },
+        "type": {
+          "type": "string",
+          "description": "Notification type."
+        },
+        "title": {
+          "type": "string",
+          "description": "Notification title."
+        },
+        "body": {
+          "type": "string",
+          "description": "Notification body content."
+        },
+        "read": {
+          "type": "boolean",
+          "description": "Read status."
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp in epoch ms."
+        }
+      },
+      "required": ["userId", "senderId", "type", "title", "body", "read", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Collection of user profiles."
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "One-to-one conversation threads."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Messages subcollection in a conversation."
+    },
+    "/calls/{callId}": {
+      "schema": "CallSession",
+      "description": "Active WebRTC calls."
+    },
+    "/calls/{callId}/callerCandidates/{candidateId}": {
+      "schema": { "$ref": "object" },
+      "description": "Caller ICE candidates."
+    },
+    "/calls/{callId}/receiverCandidates/{candidateId}": {
+      "schema": { "$ref": "object" },
+      "description": "Receiver ICE candidates."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "AppNotification",
+      "description": "User notifications."
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Jiya",
+  "description": "Private real-time communication web app with chat, voice, and video calling.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
