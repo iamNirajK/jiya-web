@@ -9,7 +9,7 @@ import {
   sendIncomingCallPush,
   sendMissedCallPush,
   sendCallCancelledPush,
-} from './server/pushService.js';
+} from './server/pushService';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

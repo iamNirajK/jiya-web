@@ -1,7 +1,7 @@
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { getMessaging, Messaging, MulticastMessage } from 'firebase-admin/messaging';
-import configJson from '../firebase-applet-config.json' with { type: 'json' };
+import configJson from '../firebase-applet-config.json';
 
 let adminApp: App | null = null;
 
